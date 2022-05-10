@@ -13,7 +13,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult, DispatchError, MultiSignature,
 };
 
 use sp_std::prelude::*;
@@ -748,6 +748,13 @@ impl_runtime_apis! {
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
 		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
 			ParachainSystem::collect_collation_info(header)
+		}
+	}
+
+	impl pallet_template_rpc_runtime_api::TemplateApi<Block, Balance> for Runtime {
+		fn test_rpc(amount: Balance) -> Result<Balance, DispatchError> {
+			let result = TemplatePallet::test_rpc(amount)?;
+			Ok(result)
 		}
 	}
 

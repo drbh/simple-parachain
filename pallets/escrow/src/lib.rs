@@ -19,6 +19,8 @@ pub mod pallet {
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -37,6 +39,10 @@ pub mod pallet {
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type Something<T> = StorageValue<_, u32>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn escrow)]
+	pub type Escrow<T> = StorageValue<_, u32>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -100,6 +106,33 @@ pub mod pallet {
 					Ok(().into())
 				},
 			}
+		}
+
+		/// my custom function
+		#[pallet::weight(10_000)]
+		pub fn start_escrow(
+			origin: OriginFor<T>,
+			amount: u64,
+			recp: AccountIdOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let _who = ensure_signed(origin)?;
+
+			println!("{:?}", "test");
+			println!("escrow_id {:?}", 1);
+			Ok(().into())
+		}
+
+		/// my custom function
+		#[pallet::weight(10_000)]
+		pub fn withdraw_escrow(
+			origin: OriginFor<T>,
+			amount: u64,
+			escrow_id: u64,
+		) -> DispatchResultWithPostInfo {
+			let _who = ensure_signed(origin)?;
+
+			println!("{:?}", "test");
+			Ok(().into())
 		}
 	}
 	impl<T: Config> Pallet<T> {

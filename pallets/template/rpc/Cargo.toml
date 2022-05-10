@@ -1,0 +1,23 @@
+[package]
+authors = ['My Team']
+edition = '2021'
+name    = 'pallet-template-rpc'
+version = '1.8.1'
+
+[dependencies]
+codec               = { package = 'parity-scale-codec', version = '2.3.1' }
+jsonrpc-core        = '18.0.0'
+jsonrpc-core-client = '18.0.0'
+jsonrpc-derive      = '18.0.0'
+serde               = { version = '1.0.136', features = ['derive'] }
+sp-api 				= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+sp-blockchain 		= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+sp-core 			= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+sp-runtime 			= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+sp-std 				= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+sp-rpc 				= { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+
+pallet-template-rpc-runtime-api = { path = 'runtime-api', default-features = false }
+
+[lib]
+doctest = false
