@@ -3,6 +3,10 @@
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://docs.substrate.io/v3/runtime/frame>
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::RuntimeDebug;
+use scale_info::TypeInfo;
+
 pub use pallet::*;
 
 #[cfg(test)]
@@ -14,10 +18,23 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[scale_info(skip_type_params(T))]
+pub struct Escrow<T: Config> {
+	#[codec(compact)]
+	pub amount: u64,
+	pub recp: AccountIdOf<T>,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+	use super::*;
+
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use frame_support::dispatch::DispatchResultWithPostInfo;
+
+	pub type Balance = u64;
 
 	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -30,7 +47,8 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
+	#[pallet::without_storage_info]
+	pub struct Pallet<T>(PhantomData<T>);
 
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/v3/runtime/storage
@@ -42,7 +60,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn escrow)]
-	pub type Escrow<T> = StorageValue<_, u32>;
+	pub type Escrows<T> = StorageMap<_, Blake2_128Concat, u64, Escrow<T>, OptionQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -117,8 +135,12 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let _who = ensure_signed(origin)?;
 
-			println!("{:?}", "test");
-			println!("escrow_id {:?}", 1);
+			// create new escrow
+			let escrow = Escrow { amount, recp };
+
+			// insert into memory
+			Escrows::<T>::insert(0, escrow.clone());
+
 			Ok(().into())
 		}
 
@@ -129,10 +151,32 @@ pub mod pallet {
 			amount: u64,
 			escrow_id: u64,
 		) -> DispatchResultWithPostInfo {
-			let _who = ensure_signed(origin)?;
+			let _sender = ensure_signed(origin)?;
+			let _current_block_number = <frame_system::Pallet<T>>::block_number();
 
-			println!("{:?}", "test");
-			Ok(().into())
+			// get the escrow as a mutable ref
+			let mut escrow = Escrows::<T>::get(escrow_id).ok_or(Error::<T>::NoneValue)?;
+
+			// check if sender is the correct recp
+			match escrow.recp == escrow.recp {
+				true => {
+					escrow.amount = escrow.amount - amount;
+					Ok(().into())
+				},
+				false => Err(Error::<T>::NoneValue.into()),
+			}
+		}
+
+		/// mint user some tokens
+		#[pallet::weight(10_000)]
+		pub fn mint(_origin: OriginFor<T>, _amount: u64) -> DispatchResultWithPostInfo {
+			todo!()
+		}
+
+		/// get a users balance
+		#[pallet::weight(10_000)]
+		pub fn balance_of(_origin: OriginFor<T>, _amount: u64) -> DispatchResultWithPostInfo {
+			todo!()
 		}
 	}
 	impl<T: Config> Pallet<T> {

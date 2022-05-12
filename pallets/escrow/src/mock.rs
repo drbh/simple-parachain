@@ -1,3 +1,5 @@
+// use std::alloc::System;
+
 use crate as pallet_template;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{parameter_types, traits::Everything};
@@ -49,8 +51,8 @@ impl Into<u64> for AccountId {
 pub const ALICE: AccountId = AccountId(1);
 pub const BOB: AccountId = AccountId(2);
 pub const CHARLIE: AccountId = AccountId(3);
-pub const EVE: AccountId = AccountId(4);
-pub const FRANK: AccountId = AccountId(5);
+// pub const EVE: AccountId = AccountId(4);
+// pub const FRANK: AccountId = AccountId(5);
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -105,5 +107,12 @@ impl pallet_template::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	let mut ext = sp_io::TestExternalities::new(t);
+	ext.execute_with(|| {
+		// Set block number and time
+		System::set_block_number(0);
+	});
+	ext
 }
