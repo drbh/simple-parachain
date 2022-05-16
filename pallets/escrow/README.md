@@ -19,7 +19,7 @@ SKIP_WASM_BUILD= cargo test -p pallet-escrow
 ## Prompts
 
 #### Prompt 1
-Please fix the pallet to make this test pass.
+Please fix the pallet to make the test named `basic_escrow_example` pass.
 
 #### Prompt 2
 Please fix the test named `timelocked_escrow_example` to only lets escrow recipients to withdraw if enough time (blocks) have past.
