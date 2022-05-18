@@ -1,5 +1,5 @@
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::fungible::Inspect};
 
 type EscrowEvent = crate::Event<Test>;
 
@@ -18,6 +18,7 @@ fn basic_escrow_example() {
 		// get escrow id number
 		let escrow_id = 0;
 
+		assert_eq!(Balances::balance(&ALICE.into()), 200);
 		System::set_block_number(10);
 		dbg!("Alice starts a simple escrow contract");
 		assert_ok!(EscrowModule::start_escrow(
@@ -26,6 +27,7 @@ fn basic_escrow_example() {
 			BOB.into(), // person who can recieve
 		));
 
+		assert_eq!(Balances::balance(&ALICE.into()), 100);
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowStarted {
@@ -47,12 +49,14 @@ fn basic_escrow_example() {
 			Error::<Test>::SenderIsNotRecipient
 		);
 
+		assert_eq!(Balances::balance(&BOB.into()), 200);
 		dbg!("Bob attempts to withdraw and can!");
 		assert_ok!(EscrowModule::withdraw_escrow(
 			Origin::signed(BOB.into()),
 			100,       // asset to put in escrow
 			escrow_id, // escrow id
 		));
+		assert_eq!(Balances::balance(&BOB.into()), 300);
 
 		assert_eq!(
 			last_event(),
@@ -75,6 +79,7 @@ fn timelocked_escrow_example() {
 		// set to 10th block for no specific reason
 		System::set_block_number(10);
 
+		assert_eq!(Balances::balance(&ALICE.into()), 200);
 		println!("Alice starts a simple escrow contract");
 		assert_ok!(EscrowModule::start_escrow(
 			Origin::signed(ALICE.into()),
@@ -82,6 +87,7 @@ fn timelocked_escrow_example() {
 			BOB.into(), // person who can recieve
 		));
 
+		assert_eq!(Balances::balance(&ALICE.into()), 100);
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowStarted {
@@ -102,6 +108,7 @@ fn timelocked_escrow_example() {
 			Error::<Test>::CannotWithdrawBeforeTime
 		);
 
+		assert_eq!(Balances::balance(&BOB.into()), 200);
 		System::set_block_number(13);
 		dbg!("Bob attempts to withdraw and can");
 		assert_ok!(EscrowModule::withdraw_escrow(
@@ -109,6 +116,8 @@ fn timelocked_escrow_example() {
 			100,       // asset to put in escrow
 			escrow_id, // escrow id
 		));
+		assert_eq!(Balances::balance(&BOB.into()), 300);
+
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowWithdrawn {
@@ -134,6 +143,7 @@ fn invalid_escrow_id() {
 			BOB.into(), // person who can recieve
 		));
 
+		assert_eq!(Balances::balance(&ALICE.into()), 100);
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowStarted {
@@ -168,6 +178,7 @@ fn storage_updated_correctly_with_withdraw_escrow() {
 			100,        // asset to put in escrow
 			BOB.into(), // person who can recieve
 		));
+		assert_eq!(Balances::balance(&ALICE.into()), 100);
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowStarted {
@@ -185,6 +196,7 @@ fn storage_updated_correctly_with_withdraw_escrow() {
 			20, // asset to withdraw from escrow
 			0,  // escrow id
 		));
+		assert_eq!(Balances::balance(&BOB.into()), 220);
 		assert_eq!(
 			last_event(),
 			crate::Event::EscrowWithdrawn {
@@ -212,6 +224,7 @@ fn storage_updated_correctly_with_withdraw_escrow() {
 			80, // asset to withdraw from escrow
 			0,  // escrow id
 		));
+		assert_eq!(Balances::balance(&BOB.into()), 300);
 
 		assert_eq!(
 			last_event(),

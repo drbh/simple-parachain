@@ -18,8 +18,6 @@ mod benchmarking;
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Escrow<T: Config> {
-	#[codec(compact)]
-	pub amount: u64,
 	pub recp: AccountIdOf<T>,
 	pub timestamp: BlockNumberOf<T>,
 }
@@ -28,9 +26,14 @@ pub struct Escrow<T: Config> {
 pub mod pallet {
 	use super::*;
 
-	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional};
+	use frame_support::{
+		dispatch::DispatchResultWithPostInfo,
+		pallet_prelude::*,
+		traits::fungible::{Inspect, Transfer},
+		transactional, PalletId,
+	};
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::ArithmeticError;
+	use sp_runtime::{traits::AccountIdConversion, ArithmeticError};
 
 	pub type Balance = u64;
 
@@ -42,6 +45,12 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		/// Type to transfer and inspect token balance.
+		//NOTE: this is not using fungibles, multiasset is not supported for now.
+		type Currency: Transfer<<Self as frame_system::Config>::AccountId, Balance = Balance>;
+
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::type_value]
@@ -115,9 +124,14 @@ pub mod pallet {
 			let current_block_number = <frame_system::Pallet<T>>::block_number();
 
 			// create new escrow
-			let escrow = Escrow { amount, recp: recp.clone(), timestamp: current_block_number };
+			let escrow =
+				Escrow { recp: recp.clone(), timestamp: current_block_number };
 
 			let escrow_id = EscrowsCount::<T>::get();
+
+			// transfer assets to escrow_account
+			let escrow_account = Self::get_escrow_account(escrow_id);
+			T::Currency::transfer(&who, &escrow_account, amount, false)?;
 
 			// insert into memory
 			Escrows::<T>::insert(escrow_id, escrow);
@@ -145,8 +159,10 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 			let current_block_number = <frame_system::Pallet<T>>::block_number();
 
-			let escrow = Escrows::<T>::take(escrow_id).ok_or(Error::<T>::NoEscrowFound)?;
-			if amount > escrow.amount {
+			let escrow = Escrows::<T>::get(escrow_id).ok_or(Error::<T>::NoEscrowFound)?;
+			let escrow_account = Self::get_escrow_account(escrow_id);
+			let escrow_amount = T::Currency::balance(&escrow_account);
+			if amount > escrow_amount {
 				return Err(Error::<T>::CannotWithdrawAmountGraterThanEscrow.into())
 			}
 
@@ -159,11 +175,10 @@ pub mod pallet {
 			// check if sender is the correct recp
 			match escrow.recp == sender {
 				true => {
-					let remaining_amount = escrow.amount - amount;
-					if remaining_amount != 0 {
-						// insert updated escrow details
-						let updated_escrow = Escrow { amount: remaining_amount, ..escrow };
-						Escrows::<T>::insert(escrow_id, updated_escrow);
+					T::Currency::transfer(&escrow_account, &sender, amount, false)?;
+					if escrow_amount == amount {
+						// remove escrow details
+						Escrows::<T>::remove(escrow_id);
 					}
 					Self::deposit_event(Event::<T>::EscrowWithdrawn {
 						amount,
@@ -176,22 +191,10 @@ pub mod pallet {
 				false => Err(Error::<T>::SenderIsNotRecipient.into()),
 			}
 		}
-
-		/// mint user some tokens
-		#[pallet::weight(10_000)]
-		pub fn mint(_origin: OriginFor<T>, _amount: u64) -> DispatchResultWithPostInfo {
-			todo!()
-		}
-
-		/// get a users balance
-		#[pallet::weight(10_000)]
-		pub fn balance_of(_origin: OriginFor<T>, _amount: u64) -> DispatchResultWithPostInfo {
-			todo!()
-		}
 	}
 	impl<T: Config> Pallet<T> {
-		pub fn test_rpc(amount: u128) -> Result<u128, DispatchError> {
-			Ok(amount)
+		pub fn get_escrow_account(escrow_id: u64) -> T::AccountId {
+			T::PalletId::get().into_sub_account(escrow_id)
 		}
 	}
 }
