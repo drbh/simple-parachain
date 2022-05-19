@@ -33,5 +33,14 @@ possible solutions
 - maybe we can use the `pallet_assets` or `pallet_balances` to add native token functionality into our pallet for our escrow logic
 
 B) what other things can we do with an escrow? we use time and recipient above what are some other ways we can leverage an escrow. What might a use case look like?
+	[VIVEK PANDYA] :
+	- Escrow can be used as trusted third party to perform swap of assets between 2 users.
+	- Perhpas an escrow stores some complex cryptograpicaly computed value and of
+	other user is able to provide same digest (or something like shared secret between two parties) then only we allow release of tokens. (For example, a simple relayer of a asset mixer)
+	- An escrow can also be used to facilitate purchase of high value NFT's  (NFT for real assets)
 
 C) please point out, fix and optimize this pallet code. What improvements can be made?
+	- Improvements:
+		- Use timestamp pallet and trait and don't use system's current blocknumber.
+		- Use proptest like framework to write more thorugh tests which covers wide range of values.
+

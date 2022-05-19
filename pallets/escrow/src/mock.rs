@@ -1,8 +1,12 @@
 // use std::alloc::System;
 
-use crate as pallet_template;
+use crate as pallet_escrow;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{parameter_types, traits::Everything};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU64, Everything},
+	PalletId,
+};
 use frame_system as system;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
@@ -65,7 +69,8 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		EscrowModule: pallet_template::{Pallet, Call, Storage, Event<T>},
+		EscrowModule: pallet_escrow::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -92,7 +97,7 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -101,14 +106,36 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
+impl pallet_balances::Config for Test {
+	type Balance = u64;
 	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ConstU64<1>;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
+	type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+	pub TestPalletId : PalletId = PalletId(*b"escrow_p");
+}
+
+impl pallet_escrow::Config for Test {
+	type Event = Event;
+	type Currency = Balances;
+	type PalletId = TestPalletId;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let config: pallet_balances::GenesisConfig<Test> = pallet_balances::GenesisConfig {
+		balances: vec![(ALICE.into(), 200), (BOB.into(), 200), (CHARLIE.into(), 200)],
+	};
 
+	config.assimilate_storage(&mut t).unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| {
 		// Set block number and time
