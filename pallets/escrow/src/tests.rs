@@ -13,6 +13,22 @@ fn last_event() -> EscrowEvent {
 }
 
 #[test]
+fn cannot_create_escrow_with_zero_amount() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(Balances::balance(&ALICE.into()), 200);
+		System::set_block_number(10);
+		dbg!("Alice starts a simple escrow contract, but with zero amount escrow can't be created");
+		assert_noop!(EscrowModule::start_escrow(
+			Origin::signed(ALICE.into()),
+			0,        // asset to put in escrow
+			BOB.into(), // person who can recieve
+		),
+		Error::<Test>::EscrowAmountCannotBeZero
+			);
+	});
+}
+
+#[test]
 fn basic_escrow_example() {
 	new_test_ext().execute_with(|| {
 		// get escrow id number
